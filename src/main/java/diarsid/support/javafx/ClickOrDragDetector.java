@@ -123,10 +123,10 @@ public class ClickOrDragDetector {
         }
         mouseEvent.setDragDetect(true);
 
-        if ( this.wasDragged || this.dragCounter == 0 ) {
-            this.dragListener.onDragStart(this.possibleDragStartMousePress);
-            this.dragCounter++;
-        }
+//        if ( this.wasDragged || this.dragCounter == 0 ) {
+//            this.dragListener.onDragStart(this.possibleDragStartMousePress);
+//            this.dragCounter++;
+//        }
 
         this.dragListener.onDragging(mouseEvent);
     }
