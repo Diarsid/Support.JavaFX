@@ -16,20 +16,18 @@ public class ClickOrDragDetector {
     private final Node node;
     private final Consumer<MouseEvent> clickListener;
     private final DragListener dragListener;
-    private final long pressedDurationTreshold;
+    private final long pressedDurationThreshold;
 
-    private boolean isPressed;
     private boolean wasDragged;
     private MouseEvent possibleDragStartMousePress;
     private long timePressed;
     private long timeReleased;
-    private long dragCounter;
 
     private ClickOrDragDetector(ClickOrDragDetector.Builder builder) {
         this.node = builder.node;
         this.clickListener = builder.onClickNotDrag;
         this.dragListener = builder.onDragNotClick;
-        this.pressedDurationTreshold = builder.pressedDurationThreshold;
+        this.pressedDurationThreshold = builder.pressedDurationThreshold;
 
         this.node.addEventFilter(MOUSE_PRESSED, this::onMousePressedAtFilter);
 
@@ -102,31 +100,20 @@ public class ClickOrDragDetector {
         }
 
         this.timePressed = currentTimeMillis();
-        this.isPressed = true;
         this.possibleDragStartMousePress = mouseEvent;
-//        mouseEvent.setDragDetect(true);
-//        mouseEvent.consume();
     }
 
     private void onDragDetected(MouseEvent mouseEvent) {
-        System.out.println("MOUSE_DRAG_DETECTED");
-
         this.wasDragged = true;
-        this.dragCounter++;
         this.dragListener.onDragStart(this.possibleDragStartMousePress);
     }
 
     private void onMouseDragged(MouseEvent mouseEvent) {
-        System.out.println("MOUSE_DRAGGED");
         if ( mouseEvent.isSecondaryButtonDown() ) {
             return;
         }
+        this.wasDragged = true;
         mouseEvent.setDragDetect(true);
-
-//        if ( this.wasDragged || this.dragCounter == 0 ) {
-//            this.dragListener.onDragStart(this.possibleDragStartMousePress);
-//            this.dragCounter++;
-//        }
 
         this.dragListener.onDragging(mouseEvent);
     }
@@ -155,18 +142,16 @@ public class ClickOrDragDetector {
 
     private void clear() {
         this.wasDragged = false;
-        this.isPressed = false;
         this.possibleDragStartMousePress = null;
         this.timePressed = 0;
         this.timeReleased = 0;
-        this.dragCounter = 0;
     }
 
     private boolean wasClickedNotDragged() {
         if ( this.wasDragged ) {
             return false;
         }
-        if ( this.mousePressedDuration() > this.pressedDurationTreshold ) {
+        if ( this.mousePressedDuration() > this.pressedDurationThreshold) {
             return false;
         }
         return true;
