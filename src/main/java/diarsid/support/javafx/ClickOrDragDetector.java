@@ -113,7 +113,7 @@ public class ClickOrDragDetector {
             return;
         }
         this.wasDragged = true;
-        mouseEvent.setDragDetect(true);
+//        mouseEvent.setDragDetect(true);
 
         this.dragListener.onDragging(mouseEvent);
     }
@@ -130,7 +130,7 @@ public class ClickOrDragDetector {
     }
 
     private void testOnClickConditionsAndPropagate(MouseEvent mouseEvent) {
-        mouseEvent.setDragDetect(false);
+//        mouseEvent.setDragDetect(false);
         if ( this.wasClickedNotDragged() ) {
             this.clickListener.accept(mouseEvent);
         }

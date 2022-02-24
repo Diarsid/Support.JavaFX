@@ -5,6 +5,7 @@ import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 
 import static diarsid.support.javafx.FrameSelection.MouseCorner.BOTTOM_LEFT;
@@ -12,15 +13,13 @@ import static diarsid.support.javafx.FrameSelection.MouseCorner.BOTTOM_RIGHT;
 import static diarsid.support.javafx.FrameSelection.MouseCorner.TOP_LEFT;
 import static diarsid.support.javafx.FrameSelection.MouseCorner.TOP_RIGHT;
 
-public class FrameSelection {
+public class FrameSelection extends Rectangle {
 
     enum MouseCorner {
         TOP_LEFT,       TOP_RIGHT,
 
         BOTTOM_LEFT,    BOTTOM_RIGHT
     }
-
-    private final Rectangle selection;
 
     private double x;
     private double y;
@@ -30,13 +29,12 @@ public class FrameSelection {
     private Bounds bounds;
 
     public FrameSelection() {
-        this.selection = new Rectangle();
-        this.selection.setHeight(0);
-        this.selection.setWidth(0);
-        this.selection.setVisible(false);
-        this.selection.toBack();
-        this.selection.mouseTransparentProperty().set(true);
-        this.selection.getStyleClass().add("frame-selection");
+        super.setHeight(0);
+        super.setWidth(0);
+        super.setVisible(false);
+        super.toBack();
+        super.mouseTransparentProperty().set(true);
+        super.getStyleClass().add("frame-selection");
     }
 
     public void start(MouseEvent mouseEvent, Bounds bounds) {
@@ -45,14 +43,14 @@ public class FrameSelection {
         this.x = mouseEvent.getSceneX();
         this.y = mouseEvent.getSceneY();
 
-        this.selection.relocate(this.x, this.y);
-        this.selection.setHeight(1);
-        this.selection.setWidth(1);
-        this.selection.setVisible(true);
-        this.selection.toFront();
+        super.relocate(this.x, this.y);
+        super.setHeight(1);
+        super.setWidth(1);
+        super.setVisible(true);
+        super.toFront();
     }
 
-    public void scrolled(double scrollX, double scrollY) {
+    public void scrolled(double mouseSceneX, double mouseSceneY, double scrollX, double scrollY) {
         if ( scrollX == 0 && scrollY == 0 ) {
             return;
         }
@@ -71,29 +69,37 @@ public class FrameSelection {
                 case TOP_RIGHT:
                     break;
                 case BOTTOM_LEFT:
-                    break;
                 case BOTTOM_RIGHT:
+                    double boundsY = this.bounds.getMinY();
+                    double maxHeightInBounds = mouseSceneY - boundsY;
+                    if ( scrollY < 0 ) {
+                        newHeight = super.getHeight() - scrollY;
+                        newY = this.y + scrollY;
+                    }
+                    else if ( scrollY > 0 ) {
+                        newHeight = super.getHeight() + scrollY;
+                        newY = this.y;
+                    }
+                    else {
+                        throw new IllegalArgumentException();
+                    }
+
+                    if ( newHeight > maxHeightInBounds ) {
+                        newHeight = maxHeightInBounds;
+                    }
+
+
+                    if ( newY < boundsY ) {
+                        newY = boundsY;
+                    }
+                    this.y = newY;
+
+                    super.relocate(this.x, newY);
+                    super.setHeight(newHeight);
                     break;
             }
 
-            if ( scrollY < 0 ) {
-                newHeight = this.selection.getHeight() - scrollY;
-                newY = this.y + scrollY;
-            }
-            else if ( scrollY > 0 ) {
-                newHeight = this.selection.getHeight() + scrollY;
-                newY = this.y;
-            }
-            else {
-                throw new IllegalArgumentException();
-            }
 
-
-            this.y = newY;
-
-            System.out.println("[SELECTION] [scroll] relocate y: " + newY);
-            this.selection.relocate(this.x, newY);
-            this.selection.setHeight(newHeight);
         }
         else if ( scrollY == 0 ) {
 
@@ -144,6 +150,7 @@ public class FrameSelection {
             newCorner = TOP_RIGHT;
         }
         else {
+            System.out.println("[SELECTION] [drag] unexpected");
             throw new IllegalArgumentException();
         }
 
@@ -166,16 +173,16 @@ public class FrameSelection {
         this.mouseY = mouseY;
         this.mouseCorner = newCorner;
 
-        this.selection.relocate(newX, newY);
-        this.selection.setWidth(newWidth);
-        this.selection.setHeight(newHeight);
+        super.relocate(newX, newY);
+        super.setWidth(newWidth);
+        super.setHeight(newHeight);
     }
 
     public void stop(MouseEvent mouseEvent) {
-        this.selection.setHeight(0);
-        this.selection.setWidth(0);
-        this.selection.toBack();
-        this.selection.setVisible(false);
+        super.setHeight(0);
+        super.setWidth(0);
+        super.toBack();
+        super.setVisible(false);
 
         this.bounds = null;
 
@@ -191,13 +198,9 @@ public class FrameSelection {
         if ( isNull(this.bounds) ) {
             return false;
         }
-        Bounds boundsS = this.selection.localToScreen(this.selection.getBoundsInLocal());
+        Bounds boundsS = super.localToScreen(super.getBoundsInLocal());
         Bounds boundsR = node.localToScreen(node.getBoundsInLocal());
 
         return boundsS.intersects(boundsR);
-    }
-
-    public Rectangle rectangle() {
-        return this.selection;
     }
 }
