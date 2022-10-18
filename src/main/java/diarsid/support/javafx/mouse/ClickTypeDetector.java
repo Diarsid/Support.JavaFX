@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.mouse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,8 +11,8 @@ import static java.util.Arrays.stream;
 import static java.util.Objects.nonNull;
 import static javafx.scene.input.MouseEvent.MOUSE_CLICKED;
 
-import static diarsid.support.javafx.ClickType.DOUBLE_CLICK;
-import static diarsid.support.javafx.ClickType.USUAL_CLICK;
+import static diarsid.support.javafx.mouse.ClickType.DOUBLE_CLICK;
+import static diarsid.support.javafx.mouse.ClickType.USUAL_CLICK;
 
 public class ClickTypeDetector {
 

@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.mouse;
 
 import java.util.function.Consumer;
 import javafx.scene.Node;

@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.mouse;
 
 import diarsid.support.objects.CommonEnum;
 

@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.stage;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -24,7 +24,12 @@ public class StageAlwaysOnTopKeeper extends AbstractStatefulPausableDestroyableW
     private final long time;
     private final TimeUnit unit;
 
-    public StageAlwaysOnTopKeeper(String name, Stage stage, NamedThreadFactory namedThreadFactory, long time, TimeUnit unit) {
+    public StageAlwaysOnTopKeeper(
+            String name,
+            Stage stage,
+            NamedThreadFactory namedThreadFactory,
+            long time,
+            TimeUnit unit) {
         super(name);
         this.stage = stage;
         this.async = new ScheduledThreadPoolExecutor(1, namedThreadFactory);

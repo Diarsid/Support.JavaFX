@@ -1,7 +1,8 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.stage;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -10,13 +11,14 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import static java.lang.Double.MAX_VALUE;
+import static java.util.Objects.nonNull;
 
 public class HiddenStages {
 
     private final Map<Stage, Stage> hiddenStagesForStages;
 
     public HiddenStages() {
-        this.hiddenStagesForStages = new HashMap<>();
+        this.hiddenStagesForStages = new ConcurrentHashMap<>();
     }
 
     private Stage createHiddenStage() {
@@ -38,11 +40,21 @@ public class HiddenStages {
         return stage;
     }
 
-    public Stage newHiddenStageFor(Stage stage) {
-        synchronized ( this.hiddenStagesForStages ) {
-            Stage newHiddenStage = this.createHiddenStage();
-            this.hiddenStagesForStages.put(stage, newHiddenStage);
-            return newHiddenStage;
+    public Stage newHiddenStage() {
+        Stage newStage = new Stage();
+        Stage newHiddenStage = this.createHiddenStage();
+
+        this.hiddenStagesForStages.put(newStage, newHiddenStage);
+
+        newStage.initOwner(newHiddenStage);
+
+        return newStage;
+    }
+
+    void closeHidden(Stage stage) {
+        Stage hiddenStage = this.hiddenStagesForStages.get(stage);
+        if ( nonNull(hiddenStage) ) {
+            Platform.runLater(hiddenStage::close);
         }
     }
 

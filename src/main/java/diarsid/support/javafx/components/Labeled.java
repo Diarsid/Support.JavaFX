@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.components;
 
 import java.util.function.Function;
 import javafx.beans.property.ObjectProperty;

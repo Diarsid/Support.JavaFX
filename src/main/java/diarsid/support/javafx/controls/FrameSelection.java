@@ -1,4 +1,4 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.controls;
 
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
@@ -8,10 +8,10 @@ import javafx.scene.shape.Rectangle;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 
-import static diarsid.support.javafx.FrameSelection.MouseCorner.BOTTOM_LEFT;
-import static diarsid.support.javafx.FrameSelection.MouseCorner.BOTTOM_RIGHT;
-import static diarsid.support.javafx.FrameSelection.MouseCorner.TOP_LEFT;
-import static diarsid.support.javafx.FrameSelection.MouseCorner.TOP_RIGHT;
+import static diarsid.support.javafx.controls.FrameSelection.MouseCorner.BOTTOM_LEFT;
+import static diarsid.support.javafx.controls.FrameSelection.MouseCorner.BOTTOM_RIGHT;
+import static diarsid.support.javafx.controls.FrameSelection.MouseCorner.TOP_LEFT;
+import static diarsid.support.javafx.controls.FrameSelection.MouseCorner.TOP_RIGHT;
 
 public class FrameSelection extends Rectangle {
 

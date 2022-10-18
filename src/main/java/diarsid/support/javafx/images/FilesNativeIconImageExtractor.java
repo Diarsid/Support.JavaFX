@@ -1,10 +1,8 @@
-package diarsid.support.javafx;
+package diarsid.support.javafx.images;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.ImageIcon;

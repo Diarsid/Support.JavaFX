@@ -1,4 +1,4 @@
-package diarsid.support.javafx.pseudoclasses;
+package diarsid.support.javafx.css.pseudoclasses;
 
 import java.util.HashMap;
 import java.util.Map;
