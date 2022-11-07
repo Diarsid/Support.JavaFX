@@ -7,8 +7,8 @@ import javafx.scene.control.Label;
 
 public class Labeled<T> extends Label {
 
-    private final Function<T, String> toString;
     private final ObjectProperty<T> property;
+    protected final Function<T, String> toString;
 
     public Labeled(T t, Function<T, String> toString) {
         super(toString.apply(t));

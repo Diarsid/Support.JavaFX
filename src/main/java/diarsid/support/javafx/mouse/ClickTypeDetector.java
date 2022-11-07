@@ -1,37 +1,53 @@
 package diarsid.support.javafx.mouse;
 
+import java.io.Closeable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static java.util.Arrays.stream;
+import diarsid.support.concurrency.threads.IncrementThreadsNaming;
+import diarsid.support.concurrency.threads.NamedThreadFactory;
+import diarsid.support.objects.references.Possible;
+import diarsid.support.objects.references.References;
+
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.UUID.randomUUID;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 import static javafx.scene.input.MouseEvent.MOUSE_CLICKED;
 
+import static diarsid.support.concurrency.threads.ThreadsUtil.shutdownAndWait;
 import static diarsid.support.javafx.mouse.ClickType.DOUBLE_CLICK;
+import static diarsid.support.javafx.mouse.ClickType.SEQUENTIAL_CLICK;
 import static diarsid.support.javafx.mouse.ClickType.USUAL_CLICK;
 
-public class ClickTypeDetector {
+public class ClickTypeDetector implements Closeable {
 
-    private final static long NOT_CLICKED = -1;
+    private static final Logger log = LoggerFactory.getLogger(ClickTypeDetector.class);
 
-    private final Node node;
-    private final Map<ClickType, Consumer<MouseEvent>> callbacksByType;
-    private final TreeMap<Integer, ClickType> clickTypesByMillisAfterLastClick;
-
-    private long timeOfLastClick;
+    private static final long NOT_CLICKED = -1;
 
     public static class Builder {
 
+        private String name;
         private Node node;
-        private final TreeMap<Integer, ClickType> clickTypesByMillisAfterLastClick;
+        private ClickTypeDurations clickTypeDurations;
+        private final Possible<BiConsumer<ClickType, MouseEvent>> callbackOnAll;
         private final Map<ClickType, Consumer<MouseEvent>> callbacksByType;
 
         private Builder() {
-            this.clickTypesByMillisAfterLastClick = new TreeMap<>();
+            this.callbackOnAll = References.simplePossibleButEmpty();
             this.callbacksByType = new HashMap<>();
         }
 
@@ -41,8 +57,18 @@ public class ClickTypeDetector {
             return builder;
         }
 
-        public ClickTypeDetector.Builder withMillisAfterLastClickForType(ClickType type, int msAfterLastClick) {
-            this.clickTypesByMillisAfterLastClick.put(msAfterLastClick, type);
+        public ClickTypeDetector.Builder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public ClickTypeDetector.Builder with(ClickTypeDurations clickTypeDurations) {
+            this.clickTypeDurations = clickTypeDurations;
+            return this;
+        }
+
+        public ClickTypeDetector.Builder withDoOnAll(BiConsumer<ClickType, MouseEvent> callback) {
+            this.callbackOnAll.resetTo(callback);
             return this;
         }
 
@@ -52,25 +78,34 @@ public class ClickTypeDetector {
         }
 
         public ClickTypeDetector build() {
-            this.clickTypesByMillisAfterLastClick.put(0, DOUBLE_CLICK);
-            stream(ClickType.values()).forEach(this::addDefaultIfAbsent);
-            return new ClickTypeDetector(this);
-        }
-
-        private void addDefaultIfAbsent(ClickType type) {
-            if ( this.clickTypesByMillisAfterLastClick.containsValue(type) ) {
-                return;
+            if ( isNull(this.clickTypeDurations) ) {
+                this.clickTypeDurations = new ClickTypeDurations(
+                        DOUBLE_CLICK.msAfterLastClick(),
+                        SEQUENTIAL_CLICK.msAfterLastClick());
             }
-
-            this.clickTypesByMillisAfterLastClick.put(type.msAfterLastClick(), type);
+            return new ClickTypeDetector(this);
         }
     }
 
+    private final Node node;
+    private final String name;
+    private final ClickTypeDurations clickTypeDurations;
+    private final Possible<BiConsumer<ClickType, MouseEvent>> callbackOnAll;
+    private final Map<ClickType, Consumer<MouseEvent>> callbacksByType;
+    private final ScheduledExecutorService async;
+    private Future<?> asyncReactOnClick;
+
+    private long timeOfLastClick;
+
     ClickTypeDetector(ClickTypeDetector.Builder builder) {
         this.node = builder.node;
+        this.name = builder.name != null ? builder.name : randomUUID().toString();
+        this.clickTypeDurations = builder.clickTypeDurations;
         this.timeOfLastClick = NOT_CLICKED;
-        this.clickTypesByMillisAfterLastClick = new TreeMap<>(builder.clickTypesByMillisAfterLastClick);
+        this.callbackOnAll = builder.callbackOnAll;
         this.callbacksByType = new HashMap<>(builder.callbacksByType);
+        this.async = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory(new IncrementThreadsNaming(format(
+                "%s[%s]", this.getClass().getSimpleName(), this.name))));
 
         this.node.addEventHandler(MOUSE_CLICKED, this::consumeMouseClickedEvent);
     }
@@ -85,30 +120,63 @@ public class ClickTypeDetector {
         this.timeOfLastClick = timeOfCurrentClick;
 
         if ( timeOfLastClickCopy == NOT_CLICKED ) {
-
-            System.out.println("[CLICK TYPE] type: " + USUAL_CLICK + " time: " + 0);
             this.reactOn(USUAL_CLICK, mouseEvent);
         }
         else {
             long timeBetweenClicks = timeOfCurrentClick - timeOfLastClickCopy;
+            ClickType clickType = this.clickTypeDurations.defineClickType(timeBetweenClicks);
 
-            ClickType clickType = this.clickTypesByMillisAfterLastClick
-                    .floorEntry((int) timeBetweenClicks)
-                    .getValue();
+            boolean prevReactionCancelled = false;
+            if ( nonNull(this.asyncReactOnClick) ) {
+                prevReactionCancelled = this.asyncReactOnClick.cancel(true);
+            }
 
-            System.out.println("[CLICK TYPE] type: " + clickType + " time: " + timeBetweenClicks);
-
-            this.reactOn(clickType, mouseEvent);
+            if ( prevReactionCancelled && clickType.is(DOUBLE_CLICK) ) {
+                this.reactOn(clickType, mouseEvent);
+            }
+            else {
+                this.scheduleReactionOn(clickType, mouseEvent);
+            }
         }
+    }
+
+    private void scheduleReactionOn(ClickType clickType, MouseEvent mouseEvent) {
+        if ( nonNull(this.asyncReactOnClick) ) {
+            this.asyncReactOnClick.cancel(true);
+        }
+
+        this.asyncReactOnClick = this.async.schedule(
+                () -> this.reactOn(clickType, mouseEvent),
+                DOUBLE_CLICK.msAfterLastClick(),
+                MILLISECONDS);
     }
 
     private void reactOn(ClickType clickType, MouseEvent mouseEvent) {
         Consumer<MouseEvent> callback = this.callbacksByType.get(clickType);
         if ( nonNull(callback) ) {
-            callback.accept(mouseEvent);
+            try {
+                callback.accept(mouseEvent);
+            }
+            catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
         }
-        else {
-            System.out.println("no action for " + clickType);
+
+        if ( this.callbackOnAll.isPresent() ) {
+            try {
+                this.callbackOnAll.get().accept(clickType, mouseEvent);
+            }
+            catch (Exception e) {
+                log.error(e.getMessage(), e);
+            }
         }
+    }
+
+    @Override
+    public void close() {
+        if ( nonNull(this.asyncReactOnClick) ) {
+            this.asyncReactOnClick.cancel(true);
+        }
+        shutdownAndWait(this.async);
     }
 }

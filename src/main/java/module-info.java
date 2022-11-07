@@ -3,6 +3,7 @@ module diarsid.support.javafx {
     requires java.desktop;
     requires javafx.controls;
     requires javafx.swing;
+    requires org.slf4j;
     requires diarsid.filesystem;
     requires diarsid.support;
     requires diarsid.desktop.ui;
