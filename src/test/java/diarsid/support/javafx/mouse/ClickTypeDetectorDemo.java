@@ -8,7 +8,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-import diarsid.support.javafx.PlatformStartup;
+import diarsid.support.javafx.PlatformActions;
 
 import static diarsid.support.javafx.mouse.ClickType.DOUBLE_CLICK;
 import static diarsid.support.javafx.mouse.ClickType.SEQUENTIAL_CLICK;
@@ -18,7 +18,7 @@ public class ClickTypeDetectorDemo {
 
 
     public static void main(String[] args) {
-        PlatformStartup.await();
+        PlatformActions.awaitStartup();
         Platform.runLater(() -> {
             Stage stage = new Stage();
             stage.initStyle(StageStyle.TRANSPARENT);
