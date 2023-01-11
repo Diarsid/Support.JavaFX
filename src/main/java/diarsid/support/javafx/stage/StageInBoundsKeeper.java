@@ -3,6 +3,7 @@ package diarsid.support.javafx.stage;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.stage.Stage;
@@ -10,6 +11,8 @@ import javafx.stage.Stage;
 import diarsid.desktop.ui.geometry.Rectangle;
 import diarsid.support.javafx.geometry.Screen;
 import diarsid.support.objects.references.Possible;
+
+import static java.util.Arrays.asList;
 
 import static diarsid.desktop.ui.geometry.Rectangle.Side.BOTTOM;
 import static diarsid.desktop.ui.geometry.Rectangle.Side.LEFT;
@@ -24,20 +27,20 @@ public class StageInBoundsKeeper {
     private final Insets zeroInsets = Insets.EMPTY;
     private final Possible<Insets> insets;
 
-    public StageInBoundsKeeper(StageMoveBinding stageMoveBinding, Rectangle bounds) {
+    public StageInBoundsKeeper(StageMoving stageMoving, Rectangle bounds) {
         this.bounds = bounds;
-        this.stage = stageMoveBinding.stage();
+        this.stage = stageMoving.stage();
         this.insets = simplePossibleButEmpty();
 
         this.stage.xProperty().addListener((property, oldV, newV) -> {
-            if ( stageMoveBinding.isMoving() ) {
+            if ( stageMoving.isMovingNow() ) {
                 return;
             }
             this.onChange((double) newV, this.stage.getY(), this.stage.getWidth(), this.stage.getHeight());
         });
 
         this.stage.yProperty().addListener((property, oldV, newV) -> {
-            if ( stageMoveBinding.isMoving() ) {
+            if ( stageMoving.isMovingNow() ) {
                 return;
             }
             this.onChange(this.stage.getX(), (double) newV, this.stage.getWidth(), this.stage.getHeight());
@@ -51,7 +54,7 @@ public class StageInBoundsKeeper {
             this.onChange(this.stage.getX(), this.stage.getY(), (double) newV, this.stage.getHeight());
         });
 
-        StageMoveBinding.Move.Interceptor interceptor = (stageAnchorMove, mouseMove) -> {
+        StageMoving.Move.Interceptor interceptor = (behavior, stageAnchorMove, mouseMove) -> {
             Insets currentInsets = this.insets.or(this.zeroInsets);
 
             EnumSet<Screen.Side> collisions = this.bounds.findCollisions(
@@ -73,7 +76,63 @@ public class StageInBoundsKeeper {
             }
         };
 
-        stageMoveBinding.intercept(interceptor);
+        stageMoving.intercept(interceptor);
+    }
+
+    public StageInBoundsKeeper(StageMoving stageMoving, Rectangle bounds, String... moves) {
+        this(stageMoving, bounds, asList(moves));
+    }
+
+    public StageInBoundsKeeper(StageMoving stageMoving, Rectangle bounds, List<String> moves) {
+        this.bounds = bounds;
+        this.stage = stageMoving.stage();
+        this.insets = simplePossibleButEmpty();
+
+        this.stage.xProperty().addListener((property, oldV, newV) -> {
+            if ( stageMoving.isMovingNow() ) {
+                return;
+            }
+            this.onChange((double) newV, this.stage.getY(), this.stage.getWidth(), this.stage.getHeight());
+        });
+
+        this.stage.yProperty().addListener((property, oldV, newV) -> {
+            if ( stageMoving.isMovingNow() ) {
+                return;
+            }
+            this.onChange(this.stage.getX(), (double) newV, this.stage.getWidth(), this.stage.getHeight());
+        });
+
+        this.stage.heightProperty().addListener((property, oldV, newV) -> {
+            this.onChange(this.stage.getX(), this.stage.getY(), this.stage.getWidth(), (double) newV);
+        });
+
+        this.stage.widthProperty().addListener((property, oldV, newV) -> {
+            this.onChange(this.stage.getX(), this.stage.getY(), (double) newV, this.stage.getHeight());
+        });
+
+        StageMoving.Move.Interceptor interceptor = (behavior, stageAnchorMove, mouseMove) -> {
+            Insets currentInsets = this.insets.or(this.zeroInsets);
+
+            EnumSet<Screen.Side> collisions = this.bounds.findCollisions(
+                    stageAnchorMove.x() + currentInsets.getLeft(),
+                    stageAnchorMove.y() + currentInsets.getTop(),
+                    this.stage.getWidth() - currentInsets.getLeft() - currentInsets.getRight(),
+                    this.stage.getHeight() - currentInsets.getTop() - currentInsets.getBottom());
+
+            if ( collisions.isEmpty() ) {
+                return;
+            }
+
+            if ( collisions.contains(TOP) || collisions.contains(BOTTOM) ) {
+                stageAnchorMove.ignoreY();
+            }
+
+            if ( collisions.contains(LEFT) || collisions.contains(RIGHT) ) {
+                stageAnchorMove.ignoreX();
+            }
+        };
+
+        stageMoving.intercept(interceptor);
     }
 
     public StageInBoundsKeeper(Stage stage, Rectangle bounds) {
