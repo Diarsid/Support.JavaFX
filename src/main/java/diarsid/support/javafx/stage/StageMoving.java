@@ -419,6 +419,10 @@ public class StageMoving {
             return;
         }
 
+        if ( this.buttonPressed.get() == null ) {
+            this.buttonPressed.set(mouseEvent.getButton());
+        }
+
         if ( ! this.buttonPressed.get().equals(PRIMARY) ) {
             return;
         }
