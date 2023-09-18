@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -200,6 +201,44 @@ public class StageMoving {
         public boolean isIgnoredY() {
             return this.yIgnored;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ChangeableMoveImpl)) return false;
+            ChangeableMoveImpl that = (ChangeableMoveImpl) o;
+            return Double.compare(that.startX, startX) == 0 &&
+                    Double.compare(that.startY, startY) == 0 &&
+                    Double.compare(that.initialX, initialX) == 0 &&
+                    Double.compare(that.initialY, initialY) == 0 &&
+                    Double.compare(that.changedX, changedX) == 0 &&
+                    Double.compare(that.changedY, changedY) == 0 &&
+                    xChanged == that.xChanged &&
+                    yChanged == that.yChanged &&
+                    xIgnored == that.xIgnored &&
+                    yIgnored == that.yIgnored;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(startX, startY, initialX, initialY, changedX, changedY, xChanged, yChanged, xIgnored, yIgnored);
+        }
+
+        @Override
+        public String toString() {
+            return "ChangeableMoveImpl{" +
+                    "startX=" + startX +
+                    ", startY=" + startY +
+                    ", initialX=" + initialX +
+                    ", initialY=" + initialY +
+                    ", changedX=" + changedX +
+                    ", changedY=" + changedY +
+                    ", xChanged=" + xChanged +
+                    ", yChanged=" + yChanged +
+                    ", xIgnored=" + xIgnored +
+                    ", yIgnored=" + yIgnored +
+                    '}';
+        }
     }
 
     static final class MouseMoveImpl implements Move {
@@ -227,6 +266,32 @@ public class StageMoving {
         @Override
         public double y() {
             return this.y;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof MouseMoveImpl)) return false;
+            MouseMoveImpl mouseMove = (MouseMoveImpl) o;
+            return Double.compare(mouseMove.startX, startX) == 0 &&
+                    Double.compare(mouseMove.startY, startY) == 0 &&
+                    Double.compare(mouseMove.x, x) == 0 &&
+                    Double.compare(mouseMove.y, y) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(startX, startY, x, y);
+        }
+
+        @Override
+        public String toString() {
+            return "MouseMoveImpl{" +
+                    "startX=" + startX +
+                    ", startY=" + startY +
+                    ", x=" + x +
+                    ", y=" + y +
+                    '}';
         }
     }
 
