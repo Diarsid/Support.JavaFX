@@ -12,7 +12,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 
@@ -301,8 +300,8 @@ public class StageMoving {
     private final List<Move.Callback> afterMoveCallbacks;
     private final Map<String, List<Move.Interceptor>> moveInterceptorsByMove;
     private final AtomicBoolean isMoving;
+    private final AtomicReference<Boolean> isMovableWhenPressed;
     private final AtomicReference<EventType<MouseEvent>> lastEvent;
-    private final AtomicReference<MouseButton> buttonPressed;
     private final ChangeableMoveImpl stageMove;
     private final MouseMoveImpl mouseMove;
     private final List<Node> boundNodes;
@@ -317,8 +316,8 @@ public class StageMoving {
         this.moveInterceptorsByMove = new HashMap<>();
         this.moveInterceptorsByMove.put(ANY_MOVE, new ArrayList<>());
         this.isMoving = new AtomicBoolean(false);
+        this.isMovableWhenPressed = new AtomicReference<>();
         this.lastEvent = new AtomicReference<>();
-        this.buttonPressed = new AtomicReference<>();
         this.stageMove = new ChangeableMoveImpl();
         this.mouseMove = new MouseMoveImpl();
         this.boundNodes = new ArrayList<>();
@@ -371,30 +370,33 @@ public class StageMoving {
     }
 
     private void onMousePressed(MouseEvent mouseEvent) {
-        double x = mouseEvent.getScreenX();
-        double y = mouseEvent.getScreenY();
-
-        if ( ! this.isStageMovable.get() ) {
+        if ( ! PRIMARY.equals(mouseEvent.getButton()) ) {
             return;
         }
 
-        MouseButton button = mouseEvent.getButton();
-        this.buttonPressed.set(button);
-        if ( button.equals(PRIMARY) ) {
-            this.xInitialDelta = this.stage.getX() - x;
-            this.yInitialDelta = this.stage.getY() - y;
+        double x = mouseEvent.getScreenX();
+        double y = mouseEvent.getScreenY();
 
-            this.stageMove.startAt(
-                    x + this.xInitialDelta,
-                    y + this.yInitialDelta);
+        boolean isMovableNow = this.isStageMovable.get();
 
-            this.mouseMove.startX = x;
-            this.mouseMove.startY = y;
+        this.lastEvent.set(MOUSE_PRESSED);
+        this.isMovableWhenPressed.set(isMovableNow);
 
-            this.lastEvent.set(MOUSE_PRESSED);
-
-            mouseEvent.consume();
+        if ( ! isMovableNow ) {
+            return;
         }
+
+        this.xInitialDelta = this.stage.getX() - x;
+        this.yInitialDelta = this.stage.getY() - y;
+
+        this.stageMove.startAt(
+                x + this.xInitialDelta,
+                y + this.yInitialDelta);
+
+        this.mouseMove.startX = x;
+        this.mouseMove.startY = y;
+
+        mouseEvent.consume();
     }
 
     private void onMouseDragged(MouseEvent mouseEvent) {
@@ -402,12 +404,25 @@ public class StageMoving {
             return;
         }
 
-        if ( this.buttonPressed.get() == null ) {
-            this.buttonPressed.set(mouseEvent.getButton());
+        if ( ! PRIMARY.equals(mouseEvent.getButton()) ) {
+            return;
         }
 
-        if ( ! this.buttonPressed.get().equals(PRIMARY) ) {
+        Boolean isMovableWhenPressedNow = this.isMovableWhenPressed.get();
+
+        if ( isNull(isMovableWhenPressedNow)) {
             return;
+        }
+
+        var lastEventNow = this.lastEvent.get();
+
+        if ( MOUSE_PRESSED.equals(lastEventNow) && ! isMovableWhenPressedNow ) {
+            mouseEvent.consume();
+            return;
+        }
+
+        if ( MOUSE_RELEASED.equals(lastEventNow) ) {
+
         }
 
         double x = mouseEvent.getScreenX();
@@ -420,7 +435,7 @@ public class StageMoving {
         this.mouseMove.x = x;
         this.mouseMove.y = y;
 
-        if ( MOUSE_PRESSED.equals(this.lastEvent.get()) ) {
+        if ( MOUSE_PRESSED.equals(lastEventNow) ) {
             this.lastEvent.set(MOUSE_DRAGGED);
             this.isMoving.set(true);
             this.beforeMoveCallbacks.forEach(callback -> {
@@ -480,15 +495,26 @@ public class StageMoving {
     }
 
     private void onMouseReleased(MouseEvent mouseEvent) {
-        if ( ! this.isStageMovable.get() ) {
+        if ( ! PRIMARY.equals(mouseEvent.getButton()) ) {
             return;
         }
 
-        if ( this.buttonPressed.get() == null ) {
-            this.buttonPressed.set(mouseEvent.getButton());
+        Boolean isMovableWhenPressedNow = this.isMovableWhenPressed.get();
+
+        if ( isNull(isMovableWhenPressedNow) ) {
+            return;
         }
 
-        if ( ! this.buttonPressed.get().equals(PRIMARY) ) {
+        if ( ! isMovableWhenPressedNow ) {
+            mouseEvent.consume();
+            this.lastEvent.set(MOUSE_RELEASED);
+            this.isMovableWhenPressed.set(null);
+            return;
+        }
+
+        this.isMovableWhenPressed.set(null);
+
+        if ( ! this.isStageMovable.get() ) {
             return;
         }
 
